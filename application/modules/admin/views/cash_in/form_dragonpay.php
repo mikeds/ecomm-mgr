@@ -13,12 +13,11 @@
 									<?=(isset($notification) ? (!empty($notification) ? $notification : '' ) : '') ?>
 								</div>     
 							</div>
-							<div class="row">
+							<div class="row ">
 								<div class="col-xl-12">
 									<div class="form-group">
-										<label>Amount <span class="text-danger">*</span></label>
-										<input type="number" min="1000" name="amount" class="form-control" placeholder="Amount" value="<?=isset($post['amount']) ? $post['amount'] : ""?>">
-										<span class="text-info"><small>Funds is not more than 500,000. You may repeat this process to add funds again.</small></span>
+										<label>Amount </label>
+										<input type="number" min="100" name="amount" class="form-control" value="100">
 										<span class="text-danger"><?=form_error('amount')?></span>
 									</div>
 								</div>
@@ -26,18 +25,14 @@
 							<div class="row">
 								<div class="col-xl-12">
 									<div class="form-group">
-										<label>Password <span class="text-danger">*</span></label>
-										<input type="password" name="password" class="form-control" placeholder="Password" value="<?=isset($post['password']) ? $post['password'] : ""?>">
-										<span class="text-danger"><?=form_error('password')?></span>
+										<button type="submit" class="btn btn-block btn-success">PROCEED</button>
 									</div>
 								</div>
 							</div>
-							<div class="row">
-								<div class="col-xl-12">
-									<div class="form-group">
-										<button type="submit" class="btn btn-block btn-danger">Add Funds</button>
-									</div>
-								</div>
+							<div class="row"> 
+								<div class="col-md-12">
+									<?=(isset($note_message) ? (!empty($note_message) ? $note_message : '' ) : '') ?>
+								</div>     
 							</div>
 						</div>
 					</div>

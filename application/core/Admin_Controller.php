@@ -31,6 +31,166 @@ class Admin_Controller extends Global_Controller {
 		$this->after_init();
 	}
 
+	/***
+	* DRAGONPAY Generate payment TX URL
+	*/
+
+	public function generate_dragonpay_tx_url($tx_id, $amount, $email_address, $description) {
+		$ccy = "PHP";
+		
+		$merchant_id 	= DRP_USERNAME;
+		$secret_key 	= DRP_PASSWORD;
+
+		$amount = number_format($amount, 2, '.', '');
+		
+		$digest 	= sha1("{$merchant_id}:{$tx_id}:{$amount}:{$ccy}:{$description}:{$email_address}:{$secret_key}");
+		$parameters = "merchantid=" . $merchant_id . "&txnid=" . $tx_id . "&amount=" . $amount . "&ccy=" . $ccy . "&description=" . urlencode($description) . "&email=" . urlencode($email_address) . "&digest=" . $digest;
+
+		$redirect = DRP_BASE_URL . "Pay.aspx?" . $parameters;
+
+		return $redirect;
+	}
+
+	/***
+	* DRAGONPAY Create Transaction
+	*/
+
+	public function create_transaction_dragonpay(
+		$dragonpay_id,
+		$amount, 
+		$fee, 
+		$transaction_type_id, 
+		$requested_by_oauth_bridge_id, 
+		$requested_to_oauth_bridge_id, 
+		$created_by_oauth_bridge_id = null, 
+		$expiration_minutes = 60, 
+		$message = ""
+	) {
+		/*
+			S Success
+			F Failure
+			P Pending
+			U Unknown
+			R Refund
+			K Chargeback
+			V Void
+			A Authorized
+		*/
+
+		$this->load->model("admin/transactions_dragonpay_model", "transactions_dragonpay");
+
+		$tx_results = $this->create_transaction(
+			$amount, 
+			$fee, 
+			$transaction_type_id, 
+			$requested_by_oauth_bridge_id, 
+			$requested_to_oauth_bridge_id, 
+			$created_by_oauth_bridge_id = null, 
+			$expiration_minutes = 60, 
+			$message
+		);
+
+		// create dragonpay tx after creating main tx
+
+		$tx_id = $tx_results['transaction_id'];
+
+		$drp_data = array(
+			'drp_id'		=> $dragonpay_id,
+			'tx_id'			=> $tx_id,
+			'drp_amount'	=> $amount + $fee,
+			'drp_status'	=> 'PENDING',
+			'drp_ref_date'	=> $this->_today
+		);
+
+		$this->transactions_dragonpay->insert($drp_data);
+
+		return $tx_results;
+	}
+
+	/***
+	 *  Create Transaction
+	 */
+
+	public function create_transaction(
+		$amount, 
+		$fee, 
+		$transaction_type_id, 
+		$requested_by_oauth_bridge_id, 
+		$requested_to_oauth_bridge_id, 
+		$created_by_oauth_bridge_id = null, 
+		$expiration_minutes = 60, 
+		$message = ""
+	) {
+
+		$this->load->model("admin/transactions_model", "transactions");
+		
+		if (is_null($created_by_oauth_bridge_id)) {
+			$created_by_oauth_bridge_id = $requested_by_oauth_bridge_id;
+		}
+
+        // expiration timestamp
+        $minutes_to_add = $expiration_minutes;
+        $time = new DateTime($this->_today);
+        $time->add(new DateInterval('PT' . $minutes_to_add . 'M'));
+        $stamp = $time->format('Y-m-d H:i:s');
+
+        $total_amount = $amount + $fee;
+
+        $data_insert = array(
+			'transaction_message'			=> $message,
+            'transaction_amount' 		    => $amount,
+            'transaction_fee'		        => $fee,
+            'transaction_total_amount'      => $total_amount,
+            'transaction_type_id'           => $transaction_type_id,
+            'transaction_requested_by'      => $requested_by_oauth_bridge_id,
+            'transaction_requested_to'	    => $requested_to_oauth_bridge_id,
+            'transaction_created_by'        => $created_by_oauth_bridge_id,
+            'transaction_date_created'      => $this->_today,
+			'transaction_date_expiration'   => $stamp,
+			'transaction_otp_status'		=> 1 // temporary activated
+        );
+
+        // generate sender ref id
+        $sender_ref_id = $this->generate_code(
+            $data_insert,
+            "crc32"
+        );
+
+        $data_insert = array_merge(
+            $data_insert,
+            array(
+                'transaction_sender_ref_id' => $sender_ref_id
+            )
+        );
+
+        // generate transaction id
+        $transaction_id = $this->generate_code(
+            $data_insert,
+            "crc32"
+        );
+
+        // generate OTP Pin
+        $pin 	= generate_code(4, 2);
+
+        $data_insert = array_merge(
+            $data_insert,
+            array(
+                'transaction_id'        => $transaction_id,
+                'transaction_otp_pin'   => $pin
+            )
+        );
+
+        $this->transactions->insert(
+            $data_insert
+		);
+		
+		return array(
+			'transaction_id'=> $transaction_id,
+			'sender_ref_id'	=> $sender_ref_id,
+			'pin'			=> $pin
+		);
+	}
+
 	public function new_ledger_datum($description = "", $transaction_id, $from_wallet_address, $to_wallet_address, $balances) {
 		$this->load->model("admin/ledger_data_model", "ledger");
 		$this->load->model("admin/wallet_addresses_model", "wallet_addresses");
@@ -294,6 +454,7 @@ class Admin_Controller extends Global_Controller {
 		return array(
 			'status' => true,
 			'results' => array(
+				'email_address'			=> $row->account_email_address,
 				'wallet_address' 		=> $wallet_address,
 				'oauth_bridge_id'		=> $oauth_bridge_id,
 				'admin_oauth_bridge_id'	=> $admin_oauth_bridge_id,
@@ -715,6 +876,13 @@ HTML;
 			// )
 		);
 
+		$menu_items[] = array(
+			'menu_id'			=> 'cash_in',
+			'menu_title'		=> 'CASH IN',
+			'menu_url'			=> 	base_url() . "cash-in",
+			'menu_controller'	=> 'cash_in',
+			'menu_icon'			=> 'view-dashboard'
+		);
 
 		$this->_data['nav_sidebar_menu'] = $this->generate_sidebar_items($menu_items);
 	}
