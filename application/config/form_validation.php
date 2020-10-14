@@ -36,6 +36,18 @@ switch( strtolower(get_controller()) ) {
 		);
 	break;
 
+	case 'cash_in' : 
+		$config = array(
+			'validate' => array(
+				array( 	
+					'field' => 'amount',
+					'label' => 'Amount',
+					'rules'	=> $required_numeric_rules
+				)
+			),
+		);
+	break;
+
 	default : $config = array();
 }
 

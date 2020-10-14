@@ -55,6 +55,9 @@ $route["default_controller"]        = "admin/Dashboard";
 $route["login"]         = "public/Login";
 $route["logout"]        = "public/Logout";
 
+$route["cash-in"]           = "admin/Cash_in";
+$route['cash-in-dragonpay'] = "admin/Cash_in/dragonpay";
+
 $route["dragonpay"] = "public/Dragonpay";
 
 $route['404_override'] = 'public/Error_404';
