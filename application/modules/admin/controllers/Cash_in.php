@@ -51,7 +51,8 @@ class Cash_in extends Admin_Controller {
 						$fee, 
 						$transaction_type_id, 
 						$account_oauth_bridge_id, 
-						$admin_oauth_bridge_id
+						$admin_oauth_bridge_id,
+						$this->_today
 					),
 					"crc32"
 				);
