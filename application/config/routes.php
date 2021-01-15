@@ -60,6 +60,10 @@ $route['cash-in-dragonpay'] = "admin/Cash_in/dragonpay";
 
 $route["dragonpay"] = "public/Dragonpay";
 
+$route["data-privacy-statement"]    = "public/Data_privacy_statement";
+$route["eula"]                      = "public/Eula";
+$route["terms-and-conditions"]      = "public/Terms_and_conditions";
+
 $route['404_override'] = 'public/Error_404';
 $route['translate_uri_dashes'] = FALSE;
 
